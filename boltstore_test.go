@@ -19,7 +19,7 @@ func TestLoadBoltstore(t *testing.T) {
 		os.Remove(boltPath)
 	}
 
-	boltConnection, err := getBoltStore(boltPath)
+	boltConnection, err := GetBoltStore(boltPath)
 
 	if err != nil {
 		t.Fatalf("Error connectiong to bolt store: %v", err)

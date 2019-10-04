@@ -6,6 +6,11 @@ type userData struct {
 	Robot    string `json:"robot"`
 }
 
+func (user *userData) PopulateFields() {
+	user.Robot = "TODO"
+}
+
 // User represents a user in the system
 type User interface {
+	PopulateFields()
 }

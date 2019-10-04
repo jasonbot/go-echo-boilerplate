@@ -20,7 +20,11 @@ func (store *boltStore) LoadRecord(tableName string, record interface{}, primary
 	key := getKey(primaryKeys)
 
 	if err := store.database.View(func(tx *bolt.Tx) error {
-		bytes := tx.Bucket([]byte(tableName)).Get([]byte(key))
+		bucket := tx.Bucket([]byte(tableName))
+		if bucket == nil {
+			return errors.New("Missing bucket")
+		}
+		bytes := bucket.Get([]byte(key))
 
 		if bytes == nil {
 			return errors.New("Empty record")
@@ -51,12 +55,36 @@ func (store *boltStore) SaveRecord(tableName string, record interface{}, primary
 	key := getKey(primaryKeys)
 
 	if err := store.database.Update(func(tx *bolt.Tx) error {
-		b, err := tx.CreateBucket([]byte(tableName))
+		b, err := tx.CreateBucketIfNotExists([]byte(tableName))
 
 		if err != nil {
 			return err
 		}
 		if err := b.Put([]byte(key), bytes); err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (store *boltStore) DeleteRecord(tableName string, primaryKeys ...string) error {
+	if store.database == nil {
+		return errors.New("Database is nil")
+	}
+
+	key := getKey(primaryKeys)
+
+	if err := store.database.Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(tableName))
+
+		if b == nil {
+			return errors.New("Bucket missing")
+		}
+		if err := b.Delete([]byte(key)); err != nil {
 			return err
 		}
 		return nil
@@ -78,7 +106,7 @@ type boltStore struct {
 	database *bolt.DB
 }
 
-func getBoltStore(path string) (Datastore, error) {
+func GetBoltStore(path string) (Datastore, error) {
 	db, err := bolt.Open(path, 0666, nil)
 	if err != nil {
 		return nil, err
