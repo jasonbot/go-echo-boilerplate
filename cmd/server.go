@@ -64,9 +64,8 @@ func sessionMiddleware(datastore quoteapi.Datastore) echo.MiddlewareFunc {
 
 			cookie, err := c.Cookie("session-id")
 
-			c.Logger().Debugf("Cookie fetch: %v %v", cookie, err)
-
 			if err != nil && cookie != nil && cookie.Value != "" {
+				c.Logger().Debugf("Fetching session %v", cookie.Value)
 				session, err := sessionStore.GetSession(cookie.Value)
 
 				if err != nil {
@@ -155,6 +154,18 @@ func main() {
 		}
 
 		return c.String(http.StatusOK, "")
+	})
+
+	e.GET("/whoami", func(c echo.Context) error {
+		sessionStore, ok := c.Get("user-session").(quoteapi.UserSession)
+
+		c.Logger().Debugf("Who am i? %v", sessionStore)
+
+		if !ok {
+			return echo.NewHTTPError(http.StatusInternalServerError, "Not logged in")
+		}
+
+		return c.JSON(http.StatusOK, sessionStore.User())
 	})
 
 	e.POST("/login", func(c echo.Context) error {
