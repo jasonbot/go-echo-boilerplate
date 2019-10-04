@@ -1,13 +1,55 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"net/http"
+	"net/url"
 	"time"
 
 	quoteapi "github.com/jasonbot/blueowl"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
+
+type locationResult struct {
+	City    string `json:"city"`
+	Country string `json:"country"`
+}
+
+func getLocation(originIP string) string {
+	remoteURL := fmt.Sprintf("http://ip-api.com/json/%s", url.PathEscape(originIP))
+
+	client := http.Client{
+		Timeout: time.Second * 5,
+	}
+
+	req, err := http.NewRequest(http.MethodGet, remoteURL, nil)
+	if err != nil {
+		return "Not on the internet"
+	}
+
+	res, err := client.Do(req)
+	if err != nil {
+		return "Nowhere"
+	}
+
+	body, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		return "???????"
+	}
+
+	location := locationResult{
+		City:    "San Francisco",
+		Country: "US",
+	}
+	if err := json.Unmarshal(body, &location); err != nil {
+		return "???"
+	}
+
+	return fmt.Sprintf("%s, %s", location.City, location.Country)
+}
 
 func sessionMiddleware(datastore quoteapi.Datastore) echo.MiddlewareFunc {
 	sessionStore, err := quoteapi.GetUserLogin(datastore)
@@ -82,7 +124,9 @@ func main() {
 			return echo.NewHTTPError(http.StatusInternalServerError, "No session store")
 		}
 
-		session, err := sessionStore.SignUp(loginInfo.Username, loginInfo.Password)
+		location := getLocation(c.RealIP())
+
+		session, err := sessionStore.SignUp(loginInfo.Username, loginInfo.Password, location)
 
 		if err != nil {
 			c.Logger().Debugf("Error signing up: %v %v", loginInfo, err)
@@ -123,7 +167,9 @@ func main() {
 			return echo.NewHTTPError(http.StatusInternalServerError, "No session store")
 		}
 
-		session, err := sessionStore.SignIn(loginInfo.Username, loginInfo.Password)
+		location := getLocation(c.RealIP())
+
+		session, err := sessionStore.SignIn(loginInfo.Username, loginInfo.Password, location)
 
 		if err != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err)

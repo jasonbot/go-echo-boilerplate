@@ -11,6 +11,7 @@ import (
 type sessionData struct {
 	SessionID string `json:"session_id"`
 	Username  string `json:"username"`
+	Location  string `json:"location"`
 }
 
 type sessionManager struct {
@@ -38,7 +39,7 @@ func (session *localSession) SignOut() error {
 	)
 }
 
-func (manager *sessionManager) SignUp(username string, password string) (UserSession, error) {
+func (manager *sessionManager) SignUp(username, password, location string) (UserSession, error) {
 	var user userData
 	if err := manager.sessionStore.LoadRecord("user", &user, username); err == nil {
 		return nil, errors.New("User exists")
@@ -51,14 +52,15 @@ func (manager *sessionManager) SignUp(username string, password string) (UserSes
 		return nil, err
 	}
 
+	user.Location = location
 	user.Password = base64.StdEncoding.EncodeToString(passwordString)
 	user.PopulateFields()
 	manager.sessionStore.SaveRecord("user", user, user.Username)
 
-	return manager.SignIn(username, password)
+	return manager.SignIn(username, password, location)
 }
 
-func (manager *sessionManager) SignIn(username string, password string) (UserSession, error) {
+func (manager *sessionManager) SignIn(username string, password string, location string) (UserSession, error) {
 	var user userData
 	if err := manager.sessionStore.LoadRecord("user", &user, username); err != nil {
 		return nil, err
@@ -75,8 +77,10 @@ func (manager *sessionManager) SignIn(username string, password string) (UserSes
 	}
 
 	newSessionID := uuid.New().String()
-	newSession := sessionData{SessionID: newSessionID, Username: user.Username}
+	newSession := sessionData{SessionID: newSessionID, Username: user.Username, Location: location}
 	manager.sessionStore.SaveRecord("session", newSession, newSession.SessionID)
+
+	user.Location = location
 
 	return &localSession{
 		sessionStore:    manager.sessionStore,
@@ -95,8 +99,8 @@ func (manager *sessionManager) GetSession(sessionID string) (UserSession, error)
 
 // UserLogin handles logging a user in by session
 type UserLogin interface {
-	SignUp(username string, password string) (UserSession, error)
-	SignIn(username string, password string) (UserSession, error)
+	SignUp(username, password, location string) (UserSession, error)
+	SignIn(username, password, location string) (UserSession, error)
 	GetSession(sessionID string) (UserSession, error)
 }
 
