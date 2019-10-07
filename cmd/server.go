@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"time"
 
-	quoteapi "github.com/jasonbot/blueowl"
+	boilerplateapi "github.com/jasonbot/go-echo-boilerplate"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 )
@@ -51,8 +51,8 @@ func getLocation(originIP string) string {
 	return fmt.Sprintf("%s, %s", location.City, location.Country)
 }
 
-func sessionMiddleware(datastore quoteapi.Datastore) echo.MiddlewareFunc {
-	sessionStore, err := quoteapi.GetUserLogin(datastore)
+func sessionMiddleware(datastore boilerplateapi.Datastore) echo.MiddlewareFunc {
+	sessionStore, err := boilerplateapi.GetUserLogin(datastore)
 
 	if err != nil {
 		panic("Session store failed")
@@ -64,16 +64,10 @@ func sessionMiddleware(datastore quoteapi.Datastore) echo.MiddlewareFunc {
 
 			cookie, err := c.Cookie("session-id")
 
-			if err != nil && cookie != nil && cookie.Value != "" {
-				c.Logger().Debugf("Fetching session %v", cookie.Value)
-				session, err := sessionStore.GetSession(cookie.Value)
-
-				if err != nil {
-					c.Logger().Debugf("Failed to fetch session store: %v", err)
-				}
+			if err == nil && cookie != nil && cookie.Value != "" {
+				session, _ := sessionStore.GetSession(cookie.Value)
 
 				if session != nil {
-					c.Logger().Debugf("User session found: %v", session)
 					c.Set("user-session", session)
 				}
 			}
@@ -97,7 +91,7 @@ func main() {
 	e.HideBanner = true
 	e.Debug = true
 
-	datastore, err := quoteapi.GetBoltStore("./prod_api")
+	datastore, err := boilerplateapi.GetBoltStore("./prod_api")
 	if err != nil {
 		panic("Can't open datastore")
 	}
@@ -111,13 +105,10 @@ func main() {
 	e.GET("/", hello)
 
 	e.POST("/signup", func(c echo.Context) error {
-		c.Logger().Debug("Sign up")
 		var loginInfo usernamePassword
 		c.Bind(&loginInfo)
 
-		sessionStore, ok := c.Get("session-store").(quoteapi.UserLogin)
-
-		c.Logger().Debugf("Session store: %v", sessionStore)
+		sessionStore, ok := c.Get("session-store").(boilerplateapi.UserLogin)
 
 		if !ok {
 			return echo.NewHTTPError(http.StatusInternalServerError, "No session store")
@@ -128,7 +119,6 @@ func main() {
 		session, err := sessionStore.SignUp(loginInfo.Username, loginInfo.Password, location)
 
 		if err != nil {
-			c.Logger().Debugf("Error signing up: %v %v", loginInfo, err)
 			return echo.NewHTTPError(http.StatusBadRequest, err)
 		}
 
@@ -139,11 +129,11 @@ func main() {
 		}
 		c.SetCookie(&cookie)
 
-		return c.JSON(http.StatusOK, session.User())
+		return c.JSON(http.StatusOK, session.User().PublicData())
 	})
 
 	e.POST("/logout", func(c echo.Context) error {
-		sessionStore, ok := c.Get("user-session").(quoteapi.UserSession)
+		sessionStore, ok := c.Get("user-session").(boilerplateapi.UserSession)
 
 		if !ok {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Not logged in")
@@ -157,22 +147,20 @@ func main() {
 	})
 
 	e.GET("/whoami", func(c echo.Context) error {
-		sessionStore, ok := c.Get("user-session").(quoteapi.UserSession)
-
-		c.Logger().Debugf("Who am i? %v", sessionStore)
+		sessionStore, ok := c.Get("user-session").(boilerplateapi.UserSession)
 
 		if !ok {
 			return echo.NewHTTPError(http.StatusInternalServerError, "Not logged in")
 		}
 
-		return c.JSON(http.StatusOK, sessionStore.User())
+		return c.JSON(http.StatusOK, sessionStore.User().PublicData())
 	})
 
 	e.POST("/login", func(c echo.Context) error {
 		var loginInfo usernamePassword
 		c.Bind(&loginInfo)
 
-		sessionStore, ok := c.Get("session-store").(quoteapi.UserLogin)
+		sessionStore, ok := c.Get("session-store").(boilerplateapi.UserLogin)
 
 		if !ok {
 			return echo.NewHTTPError(http.StatusInternalServerError, "No session store")

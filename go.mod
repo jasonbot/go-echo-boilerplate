@@ -1,4 +1,4 @@
-module github.com/jasonbot/blueowl
+module github.com/jasonbot/go-echo-boilerplate
 
 go 1.13
 

@@ -1,4 +1,4 @@
-package quoteapi
+package boilerplateapi
 
 import (
 	"encoding/json"

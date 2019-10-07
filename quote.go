@@ -1,4 +1,4 @@
-package quoteapi
+package boilerplateapi
 
 type quoteData struct {
 	QuoteID  uint64 `json:"id"`

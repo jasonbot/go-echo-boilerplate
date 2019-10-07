@@ -1,17 +1,30 @@
-package quoteapi
+package boilerplateapi
 
-type userData struct {
+// UserInfo represents all public info about a user
+type UserInfo struct {
 	Username string `json:"username"`
-	Password string `json:"password"`
-	Robot    string `json:"robot"`
 	Location string `json:"location"`
 }
 
+type userData struct {
+	UserInfo
+	Location string
+	Password string `json:"password"`
+}
+
+func (user *userData) PublicData() UserInfo {
+	return UserInfo{
+		Username: user.Username,
+		Location: user.Location,
+	}
+}
+
 func (user *userData) PopulateFields() {
-	user.Robot = "TODO"
+	// TODO: Populate other fields
 }
 
 // User represents a user in the system
 type User interface {
+	PublicData() UserInfo
 	PopulateFields()
 }

@@ -1,4 +1,4 @@
-package quoteapi
+package boilerplateapi
 
 // Datastore is an abstraction for talking to the database
 type Datastore interface {

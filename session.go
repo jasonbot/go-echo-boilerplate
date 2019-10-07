@@ -1,4 +1,4 @@
-package quoteapi
+package boilerplateapi
 
 import (
 	"encoding/base64"
@@ -90,11 +90,22 @@ func (manager *sessionManager) SignIn(username string, password string, location
 
 func (manager *sessionManager) GetSession(sessionID string) (UserSession, error) {
 	var userSession sessionData
-	if err := manager.sessionStore.LoadRecord("session", userSession, sessionID); err != nil {
-		return nil, errors.New("Session gone")
+	if err := manager.sessionStore.LoadRecord("session", &userSession, sessionID); err != nil {
+		return nil, err
 	}
 
-	return nil, errors.New("Unimplemented")
+	var user userData
+	if err := manager.sessionStore.LoadRecord("user", &user, userSession.Username); err != nil {
+		return nil, err
+	}
+
+	location := userSession.Location
+	user.Location = location
+
+	return &localSession{
+		sessionStore:    manager.sessionStore,
+		sessionData:     userSession,
+		sessionUserData: user}, nil
 }
 
 // UserLogin handles logging a user in by session
