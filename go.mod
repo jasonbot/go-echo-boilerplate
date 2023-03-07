@@ -6,5 +6,5 @@ require (
 	github.com/google/uuid v1.1.1
 	github.com/labstack/echo/v4 v4.9.0
 	go.etcd.io/bbolt v1.3.3
-	golang.org/x/crypto v0.0.0-20210817164053-32db794688a5
+	golang.org/x/crypto v0.1.0
 )
